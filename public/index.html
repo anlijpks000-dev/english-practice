@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>英语口语练习 · AI对话 + 雅思备考</title>
+<meta name="theme-color" content="#302b63">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="英语口语">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Segoe UI','Microsoft YaHei',system-ui,sans-serif;
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  min-height:100vh;color:#e0e0e0;
+}
+header{
+  text-align:center;padding:20px 20px 14px;
+  background:rgba(0,0,0,0.25);border-bottom:1px solid rgba(255,255,255,0.08);
+}
+header h1{
+  font-size:1.8rem;background:linear-gradient(90deg,#f093fb,#f5576c,#fda085);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+header p{color:#888;margin-top:4px;font-size:0.9rem}
+nav{
+  display:flex;justify-content:center;gap:6px;padding:12px 20px;flex-wrap:wrap;
+}
+nav button{
+  padding:10px 20px;border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.05);color:#ccc;border-radius:22px;
+  cursor:pointer;font-size:0.9rem;transition:all 0.25s;line-height:1.3;
+}
+nav button:hover{background:rgba(255,255,255,0.12);color:#fff}
+nav button.active{
+  background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;border-color:transparent;
+}
+.container{max-width:960px;margin:0 auto;padding:14px 20px 40px}
+.panel{display:none}
+.panel.active{display:block}
+
+/* Status bar */
+.status-bar{
+  display:flex;align-items:center;gap:10px;padding:8px 16px;
+  background:rgba(255,255,255,0.04);border-radius:10px;margin-bottom:14px;
+  font-size:0.8rem;color:#888;flex-wrap:wrap;
+}
+.status-dot{width:8px;height:8px;border-radius:50%}
+.status-dot.on{background:#4caf50}
+.status-dot.off{background:#f44336}
+
+/* ===== AI Chat ===== */
+.chat-layout{display:flex;gap:14px;flex-direction:column}
+.chat-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chat-controls select,.chat-controls input,.chat-controls button{
+  padding:9px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.06);color:#ddd;font-size:0.85rem;
+}
+.chat-controls input{flex:1;min-width:150px}
+.chat-controls button.primary{
+  background:linear-gradient(135deg,#f093fb,#f5576c);border:none;color:#fff;font-weight:600;
+}
+.chat-controls button.primary:hover{opacity:0.88}
+.chat-controls button.primary:disabled{opacity:0.4;cursor:not-allowed}
+
+.chat-box{
+  background:rgba(255,255,255,0.04);border-radius:16px;padding:16px;
+  min-height:420px;max-height:480px;overflow-y:auto;
+  border:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:10px;
+}
+.chat-msg{max-width:82%;padding:10px 15px;border-radius:16px;line-height:1.55;font-size:0.9rem;animation:popIn 0.3s}
+@keyframes popIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg.ai{align-self:flex-start;background:rgba(255,255,255,0.1);border-bottom-left-radius:4px}
+.chat-msg.user{align-self:flex-end;background:linear-gradient(135deg,#667eea,#764ba2);border-bottom-right-radius:4px}
+.chat-msg .cn-line{display:block;color:#999;font-size:0.8rem;margin-top:3px}
+.chat-msg.user .cn-line{color:#ddd}
+.chat-msg .msg-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+
+.speak-btn{
+  display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;
+  border-radius:50%;border:1px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.08);color:#ccc;cursor:pointer;font-size:0.75rem;
+  transition:all 0.2s;flex-shrink:0;
+}
+.speak-btn:hover{background:rgba(240,147,251,0.25);border-color:#f093fb;color:#fff}
+.speak-btn.speaking{background:#f5576c;border-color:#f5576c;color:#fff;animation:pulse 0.6s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+.chat-input-row{display:flex;gap:8px;margin-top:12px}
+.chat-input-row input{
+  flex:1;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.06);color:#fff;font-size:0.9rem;outline:none;
+}
+.chat-input-row input:focus{border-color:#f093fb}
+.chat-input-row button{
+  padding:12px 20px;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);
+  border:none;color:#fff;font-weight:600;cursor:pointer;font-size:0.9rem;
+}
+.chat-input-row button:hover{opacity:0.88}
+
+.scenario-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.scenario-chip{
+  padding:6px 14px;border-radius:18px;border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.05);color:#bbb;cursor:pointer;font-size:0.8rem;transition:all 0.2s;
+}
+.scenario-chip:hover{background:rgba(255,255,255,0.12);color:#fff}
+.scenario-chip.active{background:rgba(240,147,251,0.2);border-color:#f093fb;color:#fda085}
+
+/* ===== IELTS ===== */
+.ielts-tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.ielts-tab{
+  padding:9px 18px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.05);color:#ccc;cursor:pointer;font-size:0.85rem;transition:all 0.2s;
+}
+.ielts-tab:hover{background:rgba(255,255,255,0.12)}
+.ielts-tab.active{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none}
+
+.ielts-card{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:20px 24px;margin-bottom:12px;transition:all 0.2s;
+}
+.ielts-card:hover{background:rgba(255,255,255,0.07)}
+.ielts-card .topic-title{font-size:1.1rem;font-weight:700;color:#fda085;margin-bottom:6px}
+.ielts-card .topic-cues{color:#aaa;font-size:0.85rem;margin-bottom:10px}
+.ielts-card .topic-questions{list-style:none;padding:0}
+.ielts-card .topic-questions li{
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);line-height:1.5;
+  display:flex;align-items:flex-start;gap:6px;
+}
+.ielts-card .topic-questions li:last-child{border-bottom:none}
+.ielts-card .q-num{color:#f5576c;font-weight:700;min-width:20px;flex-shrink:0}
+
+.fill-card{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:20px 24px;margin-bottom:12px;
+}
+.fill-card .fill-sentence{font-size:1.05rem;margin-bottom:14px;line-height:1.6}
+.fill-card .fill-sentence .blank{
+  display:inline-block;width:130px;border-bottom:2px dashed #f5576c;color:#f5576c;text-align:center;font-weight:700;
+}
+.fill-opts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.fill-opts button{
+  padding:9px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.06);color:#ddd;cursor:pointer;font-size:0.85rem;transition:all 0.2s;
+}
+.fill-opts button:hover{background:rgba(255,255,255,0.14)}
+.fill-opts button.chosen-correct{background:rgba(76,175,80,0.35);border-color:#4caf50;color:#fff}
+.fill-opts button.chosen-wrong{background:rgba(244,67,54,0.35);border-color:#f44336;color:#fff}
+.fill-result{margin-top:8px;min-height:20px;font-size:0.85rem;line-height:1.5}
+
+/* ===== Dictionary (same as before) ===== */
+.dict-search{
+  width:100%;padding:12px 18px;border-radius:12px;
+  border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);
+  color:#fff;font-size:1rem;margin-bottom:14px;outline:none;
+}
+.dict-search:focus{border-color:#f093fb}
+.slang-card{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:14px 18px;margin-bottom:8px;transition:all 0.2s;
+}
+.slang-card:hover{background:rgba(255,255,255,0.07)}
+.slang-term{
+  font-size:1.15rem;font-weight:700;background:linear-gradient(90deg,#fda085,#f5576c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.slang-term-row{display:flex;align-items:center;gap:8px}
+.slang-meaning{color:#bbb;margin-top:3px}
+.slang-meaning-cn{color:#f0b0ff;margin-top:2px;font-size:0.85rem}
+.slang-example{color:#888;font-style:italic;margin-top:3px;font-size:0.85rem}
+.slang-example-cn{color:#777;margin-top:1px;font-size:0.8rem}
+.slang-tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:0.7rem;background:rgba(240,147,251,0.2);color:#f093fb;margin-top:4px}
+
+.score-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.score-badge{
+  display:inline-block;background:rgba(255,255,255,0.1);padding:6px 16px;
+  border-radius:20px;font-size:0.85rem;color:#fda085;
+}
+
+footer{text-align:center;padding:18px;color:#555;font-size:0.8rem}
+
+@media(max-width:600px){
+  header h1{font-size:1.3rem}
+  .chat-msg{max-width:92%}
+  nav button{padding:8px 12px;font-size:0.8rem}
+  .chat-controls{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>English Speaking Practice</h1>
+<p>AI 自由对话 · IELTS 雅思备考 · 俚语词典 · 支持朗读发音</p>
+</header>
+
+<nav>
+<button class="active" data-panel="chat">💬 AI 对话<br><small>AI Chat</small></button>
+<button data-panel="ielts">📝 雅思练习<br><small>IELTS</small></button>
+<button data-panel="dict">📖 俚语词典<br><small>Slang</small></button>
+</nav>
+
+<div class="container">
+
+<!-- ==================== AI CHAT PANEL ==================== -->
+<div class="panel active" id="panel-chat">
+<div class="status-bar" id="status-bar">
+  <span>API 状态：</span><span class="status-dot off" id="status-dot"></span>
+  <span id="status-text">检测中...</span>
+  <span style="margin-left:auto;font-size:0.75rem">设置环境变量 ANTHROPIC_API_KEY 启用 AI · 无 Key 时使用模拟回复</span>
+</div>
+
+<div class="scenario-grid" id="scenario-grid">
+  <span class="scenario-chip active" data-scenario="Coffee Shop ☕">☕ Coffee Shop</span>
+  <span class="scenario-chip" data-scenario="Workplace Chat 💼">💼 Workplace</span>
+  <span class="scenario-chip" data-scenario="Hanging with Friends 🎉">🎉 Friends</span>
+  <span class="scenario-chip" data-scenario="Texting a Friend 📱">📱 Texting</span>
+  <span class="scenario-chip" data-scenario="At a Party 🪩">🪩 Party</span>
+  <span class="scenario-chip" data-scenario="Traveling ✈️">✈️ Travel</span>
+  <span class="scenario-chip" data-scenario="Ordering Food 🍔">🍔 Restaurant</span>
+  <span class="scenario-chip" data-scenario="Job Interview 🎯">🎯 Interview</span>
+  <span class="scenario-chip" data-scenario="Shopping Mall 🛍️">🛍️ Shopping</span>
+  <span class="scenario-chip" data-scenario="At the Doctor 🏥">🏥 Doctor</span>
+  <span class="scenario-chip" data-scenario="Networking Event 🤝">🤝 Networking</span>
+  <span class="scenario-chip" data-scenario="Movie Night 🎬">🎬 Movie Night</span>
+  <span class="scenario-chip" data-scenario="Gym & Fitness 💪">💪 Gym</span>
+  <span class="scenario-chip" data-scenario="Public Transport 🚇">🚇 Transport</span>
+  <span class="scenario-chip" data-scenario="Hotel Check-in 🏨">🏨 Hotel</span>
+  <span class="scenario-chip custom-chip" data-scenario="__custom__">✏️ 自定义...</span>
+</div>
+
+<div class="chat-controls" style="margin-bottom:10px">
+  <select id="level-select">
+    <option value="beginner">初级 · Beginner</option>
+    <option value="intermediate" selected>中级 · Intermediate</option>
+    <option value="advanced">高级 · Advanced/Native</option>
+  </select>
+  <input id="custom-scenario" placeholder="自定义场景（如：在机场值机时行李箱超重...）" style="display:none">
+  <button class="primary" onclick="resetChat()" style="padding:9px 16px;font-size:0.85rem">🔄 重新开始</button>
+</div>
+
+<div class="chat-box" id="chat-box">
+  <div class="chat-msg ai">Hey! I'm Alex 👋 Pick a scenario above and let's chat! I'll help you practice real, natural English. What scenario do you wanna go with?</div>
+</div>
+
+<div class="chat-input-row">
+  <input id="chat-input" placeholder="输入你的回复... Type your reply..." onkeydown="if(event.key==='Enter')sendMessage()">
+  <button onclick="sendMessage()">发送<br>Send</button>
+</div>
+</div>
+
+<!-- ==================== IELTS PANEL ==================== -->
+<div class="panel" id="panel-ielts">
+<div class="ielts-tabs">
+  <button class="ielts-tab active" data-sub="speaking1">Speaking Part 1</button>
+  <button class="ielts-tab" data-sub="speaking2">Speaking Part 2</button>
+  <button class="ielts-tab" data-sub="speaking3">Speaking Part 3</button>
+  <button class="ielts-tab" data-sub="vocab">Vocabulary 词汇</button>
+  <button class="ielts-tab" data-sub="idioms">Idioms 习语</button>
+</div>
+<div class="score-row" style="margin-bottom:12px" id="ielts-score-row" hidden>
+  <span class="score-badge">正确：<b id="ielts-correct">0</b> / <b id="ielts-total">0</b></span>
+  <button class="primary" onclick="loadIELTSQuestions()" style="padding:8px 18px;font-size:0.85rem">换一批题 🔄</button>
+</div>
+<div id="ielts-area"></div>
+</div>
+
+<!-- ==================== DICTIONARY PANEL ==================== -->
+<div class="panel" id="panel-dict">
+<input class="dict-search" placeholder="🔍 搜索俚语（支持中英文）..." id="dict-search" oninput="renderDict()">
+<div id="dict-area"></div>
+</div>
+
+</div>
+
+<footer>💡 提示：点击 🔊 按钮听发音 · AI 对话中尽量用英文打字，练口语表达！</footer>
+
+<script>
+// ==================== SPEECH ====================
+var speakingBtn = null;
+function speak(text, btn, tone){
+  if(!('speechSynthesis' in window)) return;
+  if(window.speechSynthesis.speaking && speakingBtn===btn){window.speechSynthesis.cancel();if(btn)btn.classList.remove('speaking');speakingBtn=null;return}
+  window.speechSynthesis.cancel();if(speakingBtn)speakingBtn.classList.remove('speaking');
+  var u=new SpeechSynthesisUtterance(text);u.lang='en-US';
+  switch(tone){case'excited':u.rate=1.05;u.pitch=1.2;break;case'cheerful':u.rate=0.95;u.pitch=1.1;break;case'frustrated':u.rate=0.85;u.pitch=0.9;break;default:u.rate=0.9;u.pitch=1}
+  var voices=window.speechSynthesis.getVoices();
+  var v=voices.find(function(x){return x.lang==='en-US'&&x.name.indexOf('Google')!==-1})||voices.find(function(x){return x.lang==='en-US'})||voices.find(function(x){return x.lang.indexOf('en')===0});
+  if(v)u.voice=v;
+  if(btn){btn.classList.add('speaking');speakingBtn=btn}
+  u.onend=function(){if(btn)btn.classList.remove('speaking');speakingBtn=null};
+  u.onerror=function(){if(btn)btn.classList.remove('speaking');speakingBtn=null};
+  window.speechSynthesis.speak(u);
+}
+if('speechSynthesis' in window){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=function(){window.speechSynthesis.getVoices()}}
+
+// ==================== NAVIGATION ====================
+document.querySelectorAll('nav button').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active');
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});
+    document.getElementById('panel-'+b.dataset.panel).classList.add('active');
+    if(b.dataset.panel==='dict') renderDict();
+    if(b.dataset.panel==='ielts') loadIELTS();
+  });
+});
+
+// ==================== API STATUS ====================
+fetch('/api/status').then(function(r){return r.json()}).then(function(s){
+  document.getElementById('status-text').textContent=s.message;
+  var dot=document.getElementById('status-dot');
+  if(s.hasApiKey){dot.className='status-dot on';dot.parentElement.querySelector('span:last-child').textContent='AI 已启用'}
+  else{dot.className='status-dot off';}
+});
+
+// ==================== AI CHAT ====================
+var currentScenario='Coffee Shop ☕';
+var chatMessages=[];
+var isLoading=false;
+
+// Scenario chips
+document.querySelectorAll('.scenario-chip').forEach(function(chip){
+  chip.addEventListener('click',function(){
+    var s=this.dataset.scenario;
+    if(s==='__custom__'){
+      document.getElementById('custom-scenario').style.display='inline-block';
+      document.getElementById('custom-scenario').focus();
+    }else{
+      document.getElementById('custom-scenario').style.display='none';
+      document.querySelectorAll('.scenario-chip').forEach(function(c){c.classList.remove('active')});
+      this.classList.add('active');
+      currentScenario=s;
+    }
+  });
+});
+
+document.getElementById('custom-scenario').addEventListener('input',function(){
+  if(this.value.trim()){
+    currentScenario=this.value.trim();
+    document.querySelectorAll('.scenario-chip').forEach(function(c){c.classList.remove('active')});
+    document.querySelector('.custom-chip').classList.add('active');
+  }
+});
+
+function resetChat(){
+  document.getElementById('chat-box').innerHTML='';
+  chatMessages=[];
+  isLoading=false;
+  var s=currentScenario;
+  var level=document.getElementById('level-select').value;
+  var levelCN=level==='beginner'?'初级':level==='intermediate'?'中级':'高级';
+  addMessage('ai',"Hey! I'm Alex 👋 Let's practice English in this scenario: <b>"+s+"</b> (Level: "+levelCN+"). I'll keep it natural and help you improve. Ready? Go ahead! 😄", null, 'cheerful');
+}
+
+function addMessage(role, text, cn, tone){
+  var box=document.getElementById('chat-box');
+  var div=document.createElement('div');
+  div.className='chat-msg '+role;
+  var id='spk-'+Date.now()+Math.random();
+  var cnHTML=cn?'<span class="cn-line">'+cn+'</span>':'';
+  div.innerHTML='<div class="msg-row"><span>'+text+'</span> <button class="speak-btn" id="'+id+'" title="朗读">🔊</button></div>'+cnHTML;
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+  setTimeout(function(){
+    var btn=document.getElementById(id);
+    if(btn)btn.addEventListener('click',function(){speak(text.replace(/<[^>]*>/g,''),btn,tone||'casual')});
+  },50);
+}
+
+function addLoading(){
+  var box=document.getElementById('chat-box');
+  var div=document.createElement('div');
+  div.className='chat-msg ai';div.id='loading-msg';
+  div.textContent='Alex is typing...';
+  box.appendChild(div);box.scrollTop=box.scrollHeight;
+}
+
+function removeLoading(){
+  var el=document.getElementById('loading-msg');if(el)el.remove();
+}
+
+async function sendMessage(){
+  if(isLoading)return;
+  var input=document.getElementById('chat-input');
+  var text=input.value.trim();if(!text)return;
+  input.value='';isLoading=true;
+
+  addMessage('user',text,null,'casual');
+  chatMessages.push({role:'user',content:text});
+
+  addLoading();
+
+  try{
+    var level=document.getElementById('level-select').value;
+    var resp=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:chatMessages,scenario:currentScenario,level:level})
+    });
+    var data=await resp.json();
+    removeLoading();
+    var reply=data.reply||"Sorry, I didn't catch that. Could you say it again?";
+    addMessage('ai',reply,null,'casual');
+    chatMessages.push({role:'assistant',content:reply});
+  }catch(e){
+    removeLoading();
+    addMessage('ai',"Oops, something went wrong. Let's try again! What were you saying?",null,'casual');
+  }
+  isLoading=false;
+}
+
+// ==================== IELTS ====================
+var currentIELTSSub='speaking1';
+var ieltsCorrect=0,ieltsTotal=0;
+
+document.querySelectorAll('.ielts-tab').forEach(function(t){
+  t.addEventListener('click',function(){
+    document.querySelectorAll('.ielts-tab').forEach(function(x){x.classList.remove('active')});
+    this.classList.add('active');
+    currentIELTSSub=this.dataset.sub;
+    ieltsCorrect=0;ieltsTotal=0;
+    updateIELTSScore();
+    loadIELTS();
+  });
+});
+
+function updateIELTSScore(){
+  document.getElementById('ielts-correct').textContent=ieltsCorrect;
+  document.getElementById('ielts-total').textContent=ieltsTotal;
+}
+
+function loadIELTS(){
+  loadIELTSQuestions();
+}
+
+async function loadIELTSQuestions(){
+  var area=document.getElementById('ielts-area');
+  var sub=currentIELTSSub;
+
+  if(sub==='speaking1'||sub==='speaking2'||sub==='speaking3'){
+    document.getElementById('ielts-score-row').hidden=true;
+    area.innerHTML='<div style="padding:20px;text-align:center;color:#888;">加载中...</div>';
+    // Load all topics
+    var type=sub==='speaking1'?'part1':sub==='speaking2'?'part2':'part3';
+    var resp=await fetch('/api/ielts/speaking?type='+type);
+    var data=await resp.json();
+    // Load multiple topics
+    var allResp=await fetch('/api/ielts/topics');
+    var allData=await allResp.json();
+    var topics=type==='part1'?allData.part1:(type==='part2'?allData.part2:allData.part3);
+
+    area.innerHTML='';
+    // Load 3 random topics for part1/part3, or 2 for part2
+    var count=type==='part2'?2:3;
+    for(var i=0;i<count;i++){
+      var idx=Math.floor(Math.random()*topics.length);
+      var resp2=await fetch('/api/ielts/speaking?type='+type+'&index='+idx);
+      var item=await resp2.json();
+      if(type==='part2'){
+        area.innerHTML+=renderPart2Card(item.item);
+      }else if(type==='part3'){
+        area.innerHTML+=renderPart3Card(item.item);
+      }else{
+        area.innerHTML+=renderPart1Card(item.item);
+      }
+    }
+    attachSpeakButtons();
+  }else if(sub==='vocab'){
+    document.getElementById('ielts-score-row').hidden=false;
+    ieltsCorrect=0;ieltsTotal=0;updateIELTSScore();
+    area.innerHTML='<div style="padding:20px;text-align:center;color:#888;">加载中...</div>';
+    var resp=await fetch('/api/ielts/vocab?count=10');
+    var data=await resp.json();
+    renderFillQuestions(data.questions,'vocab');
+  }else if(sub==='idioms'){
+    document.getElementById('ielts-score-row').hidden=false;
+    ieltsCorrect=0;ieltsTotal=0;updateIELTSScore();
+    area.innerHTML='<div style="padding:20px;text-align:center;color:#888;">加载中...</div>';
+    var resp=await fetch('/api/ielts/idioms?count=10');
+    var data=await resp.json();
+    renderFillQuestions(data.questions,'idioms');
+  }
+}
+
+function renderPart1Card(item){
+  var html='<div class="ielts-card"><div class="topic-title">📌 '+item.topic+'</div><ul class="topic-questions">';
+  item.questions.forEach(function(q,i){
+    html+='<li><span class="q-num">'+(i+1)+'.</span><span>'+q+' <button class="speak-btn ielts-speak" data-text="'+q.replace(/"/g,'&quot;')+'" title="朗读">🔊</button></span></li>';
+  });
+  html+='</ul></div>';
+  return html;
+}
+
+function renderPart2Card(item){
+  var html='<div class="ielts-card"><div class="topic-title">🎤 '+item.topic+'</div>';
+  html+='<div class="topic-cues"><b>Cue Card 提示：</b><br>';
+  item.cues.forEach(function(c){html+='&nbsp;&nbsp;• '+c+'<br>'});
+  html+='</div>';
+  html+='<p style="color:#999;font-size:0.8rem">💡 <b>练习建议：</b>用1分钟准备，然后连续说1-2分钟。用手机录音，回听自己的发音和流利度。点击下方 🔊 跟读题目。</p>';
+  html+='<button class="speak-btn ielts-speak" style="margin-top:8px" data-text="'+item.topic.replace(/"/g,'&quot;')+'" title="朗读题目">🔊 朗读题目</button></div>';
+  return html;
+}
+
+function renderPart3Card(item){
+  var html='<div class="ielts-card"><div class="topic-title">💭 '+item.topic+'</div><ul class="topic-questions">';
+  item.questions.forEach(function(q,i){
+    html+='<li><span class="q-num">'+(i+1)+'.</span><span>'+q+' <button class="speak-btn ielts-speak" data-text="'+q.replace(/"/g,'&quot;')+'" title="朗读">🔊</button></span></li>';
+  });
+  html+='</ul></div>';
+  return html;
+}
+
+function renderFillQuestions(questions, type){
+  var area=document.getElementById('ielts-area');
+  area.innerHTML='';
+  questions.forEach(function(q,qi){
+    var sentenceHTML=q.sentence.replace('___','<span class="blank">_____</span>');
+    var div=document.createElement('div');
+    div.className='fill-card';
+    div.innerHTML=
+      '<div class="fill-sentence">'+sentenceHTML+' <button class="speak-btn" id="ielts-fill-spk-'+qi+'" title="朗读">🔊</button></div>'+
+      '<div class="fill-opts" id="fill-opts-'+qi+'">'+q.options.map(function(o){return '<button onclick="answerIELTSFill(\''+o+'\',\''+q.answer+'\',this,'+qi+',\''+q.tip+'\')">'+o+'</button>'}).join('')+'</div>'+
+      '<div class="fill-result" id="fill-result-'+qi+'"></div>';
+    area.appendChild(div);
+    setTimeout(function(){
+      var btn=document.getElementById('ielts-fill-spk-'+qi);
+      if(btn)btn.addEventListener('click',function(){speak(q.sentence.replace('___',''),btn,'casual')});
+    },50);
+  });
+}
+
+function answerIELTSFill(chosen,correct,btn,qi,tip){
+  var resultDiv=document.getElementById('fill-result-'+qi);
+  if(resultDiv.dataset.answered==='1')return;
+  resultDiv.dataset.answered='1';ieltsTotal++;
+  var buttons=document.querySelectorAll('#fill-opts-'+qi+' button');
+  buttons.forEach(function(b){
+    if(b.textContent===correct)b.classList.add('chosen-correct');
+    if(b===btn&&chosen!==correct)b.classList.add('chosen-wrong');
+    b.style.pointerEvents='none';
+  });
+  if(chosen===correct){ieltsCorrect++;resultDiv.innerHTML='<span style="color:#4caf50;">✅ 正确！</span> 💡 '+tip}
+  else{resultDiv.innerHTML='<span style="color:#f44336;">❌ 正确答案：<b>'+correct+'</b></span> 💡 '+tip}
+  updateIELTSScore();
+}
+
+function attachSpeakButtons(){
+  setTimeout(function(){
+    document.querySelectorAll('.ielts-speak').forEach(function(btn){
+      btn.addEventListener('click',function(){speak(this.dataset.text,this,'casual')});
+    });
+  },100);
+}
+
+// Initial load
+loadIELTS();
+
+// ==================== SLANG DICTIONARY ====================
+var slangDB=[/* same 30 entries as before */];
+// ... (define slangDB - I'll add this inline below)
+
+function renderDict(){
+  var query=document.getElementById('dict-search').value.toLowerCase();
+  var filtered=slangDB.filter(function(s){return query===''||s.term.toLowerCase().indexOf(query)!==-1||s.meaning.toLowerCase().indexOf(query)!==-1||s.meaningCN.indexOf(query)!==-1});
+  var area=document.getElementById('dict-area');
+  area.innerHTML=filtered.map(function(s){
+    return'<div class="slang-card"><div class="slang-term-row"><span class="slang-term">'+s.term+'</span><button class="speak-btn dict-spk" data-text="'+s.term.replace(/"/g,'&quot;')+'" title="朗读">🔊</button></div><div class="slang-meaning">'+s.meaning+'</div><div class="slang-meaning-cn">'+s.meaningCN+'</div><div class="slang-example">"'+s.example+'"</div><div class="slang-example-cn">'+s.exampleCN+'</div><span class="slang-tag">'+s.tag+'</span></div>';
+  }).join('');
+  setTimeout(function(){
+    document.querySelectorAll('.dict-spk').forEach(function(btn){btn.addEventListener('click',function(){speak(this.dataset.text,this,'casual')})});
+  },50);
+}
+</script>
+
+<script>
+// ==================== SLANG DATA ====================
+var slangDB=[
+  {term:"What's up?",meaning:"A casual way to say 'Hello, how are you?'",meaningCN:"随意的打招呼，相当于'嗨，还好吗？'",example:"Yo, what's up man? — Nothin' much, you?",exampleCN:"哟，咋样兄弟？—— 没啥，你呢？",tag:"问候 Greeting"},
+  {term:"No worries",meaning:"It's okay / don't worry about it",meaningCN:"没关系 / 别放心上",example:"Shoot, I'm late! — No worries, we just got here.",exampleCN:"糟糕我迟到了！—— 没事儿，我们也刚到。",tag:"回应 Response"},
+  {term:"Hang out",meaning:"To spend time together casually",meaningCN:"一起消磨时间、出去玩",example:"You tryna hang out this weekend?",exampleCN:"周末想不想出来逛逛？",tag:"社交 Social"},
+  {term:"I'm down",meaning:"I agree / I'm willing to join",meaningCN:"我同意 / 算我一个",example:"Pizza tonight? — Ohhh I'm so down!",exampleCN:"今晚吃披萨？—— 哎哟我太可以了！",tag:"同意 Agreement"},
+  {term:"Hit me up",meaning:"Contact me / message me",meaningCN:"联系我 / 找我",example:"You free later? Hit me up!",exampleCN:"等会儿有空不？找我！",tag:"社交 Social"},
+  {term:"My bad",meaning:"My mistake / I'm sorry",meaningCN:"我的错 / 不好意思",example:"Oops, my bad! Didn't see you there.",exampleCN:"哎呀我的锅！没看见你在那儿。",tag:"道歉 Apology"},
+  {term:"For real?",meaning:"Are you serious? / Is that true?!",meaningCN:"真的假的？！/ 你认真的？！",example:"I got the job!! — Wait, for real?! That's insane!!",exampleCN:"我拿到工作了！！—— 等等，真的吗？！太疯狂了！！",tag:"惊讶 Surprise"},
+  {term:"Chill",meaning:"Relax / calm down / cool",meaningCN:"放松 / 冷静 / 酷的",example:"Dude, just chill. It's gonna be fine.",exampleCN:"哥们，淡定点。不会有事的。",tag:"态度 Attitude"},
+  {term:"Lit",meaning:"Exciting, excellent, amazing",meaningCN:"燃爆了、超级嗨、绝了",example:"BRO that party was SO lit last night!!",exampleCN:"兄弟昨晚那派对简直燃爆了！！",tag:"赞美 Praise"},
+  {term:"Salty",meaning:"Bitter, upset, holding a grudge",meaningCN:"不爽、闹情绪、酸溜溜的",example:"Ugh, he's STILL salty about that game? Let it go man.",exampleCN:"呃，他还在为那场比赛生气啊？放下吧兄弟。",tag:"情绪 Emotion"},
+  {term:"Throw shade",meaning:"To subtly insult or disrespect someone",meaningCN:"暗戳戳diss、阴阳怪气",example:"Did she seriously just throw shade at my fit??",exampleCN:"她刚刚是不是在diss我的穿搭？？",tag:"社交 Social"},
+  {term:"Low-key",meaning:"Secretly / quietly / on the down low",meaningCN:"偷偷地 / 暗暗地 / 低调地",example:"I'm low-key obsessed with this song rn.",exampleCN:"我最近暗暗迷上了这首歌。",tag:"态度 Attitude"},
+  {term:"Savage",meaning:"Bold, brutally honest, fierce",meaningCN:"太狠了、一针见血",example:"That clapback was SAVAGE. She ended him.",exampleCN:"那个回怼也太狠了，直接终结了他。",tag:"赞美 Praise"},
+  {term:"Ghost",meaning:"To suddenly cut off all contact",meaningCN:"突然失联、人间蒸发",example:"We talked every day and then he just... ghosted me. Poof.",exampleCN:"我们天天聊天然后他就...消失了。咻的一下。",tag:"社交 Social"},
+  {term:"Flex",meaning:"To show off / boast",meaningCN:"炫耀、显摆、秀",example:"Okay we get it, you got a new car. Stop flexing lol.",exampleCN:"好了知道了，你买新车了。别秀了哈哈。",tag:"态度 Attitude"},
+  {term:"Cringe",meaning:"Second-hand embarrassment / painfully awkward",meaningCN:"尬到脚趾抠地、不敢直视的",example:"Oh nooo that speech was so cringe I had to look away.",exampleCN:"天哪那个发言太尬了我都不忍直视。",tag:"情绪 Emotion"},
+  {term:"Slay",meaning:"To absolutely kill it / look stunning",meaningCN:"杀疯了 / 表现绝了 / 美翻了",example:"GIRL you are SLAYING in that dress!!!",exampleCN:"姐妹你穿那条裙子美翻了！！！",tag:"赞美 Praise"},
+  {term:"Simp",meaning:"Someone who does way too much for a crush",meaningCN:"舔狗（为喜欢的人过度付出）",example:"Bro bought her a car on week two. Certified simp behavior.",exampleCN:"兄弟第二周就给她买了辆车。纯纯舔狗行为。",tag:"标签 Label"},
+  {term:"Vibe",meaning:"The mood / atmosphere / aura",meaningCN:"氛围感 / 感觉 / 气场",example:"This playlist is such a vibe right now.",exampleCN:"这个歌单现在这个感觉太对了。",tag:"通用 General"},
+  {term:"Bet",meaning:"Okay / sure / got it — quick confirmation",meaningCN:"行 / 稳了 / 没问题",example:"See you at 8? — Bet. I'll be there.",exampleCN:"八点见？—— 稳了，我会到的。",tag:"同意 Agreement"},
+  {term:"GOAT",meaning:"Greatest Of All Time",meaningCN:"史上最佳（G.O.A.T. 缩写）",example:"MJ is the GOAT and I will die on that hill.",exampleCN:"乔丹就是GOAT，我誓死捍卫这个观点。",tag:"赞美 Praise"},
+  {term:"Dope",meaning:"Cool / awesome / impressive",meaningCN:"酷毙了 / 太牛了",example:"Yo that jacket is DOPE! Where'd you cop that?!",exampleCN:"哟那件夹克太酷了！哪儿入的？！",tag:"赞美 Praise"},
+  {term:"Bail",meaning:"To leave suddenly or cancel plans last minute",meaningCN:"突然开溜 / 临时放鸽子",example:"This party's dead... let's bail and get tacos.",exampleCN:"这派对太没劲了...溜吧，去吃卷饼。",tag:"动作 Action"},
+  {term:"Crash",meaning:"To fall asleep hard / to stay over",meaningCN:"倒下就睡 / 蹭住一晚",example:"I'm dead tired, I'm gonna crash. / Mind if I crash here?",exampleCN:"我累死了，睡了啊。/ 介意我在这凑合一晚吗？",tag:"动作 Action"},
+  {term:"Sketchy",meaning:"Suspicious / questionable / shady",meaningCN:"可疑的 / 不靠谱的 / 不安全的",example:"Nah I'm not walking down that street, it's mad sketchy at night.",exampleCN:"别，我才不走那条街，晚上特别不安全。",tag:"描述 Description"},
+  {term:"YOLO",meaning:"You Only Live Once — the ultimate justification",meaningCN:"人生只有一次—— 终极冒险理由",example:"Booked a flight to Paris at 2am!! YOLO baby!!",exampleCN:"凌晨两点订了去巴黎的机票！！人生苦短！！",tag:"态度 Attitude"},
+  {term:"Catch up",meaning:"To reconnect and update each other on life",meaningCN:"叙旧、聊近况、聚一聚",example:"It's been forever! We gotta catch up over coffee!",exampleCN:"好久没见了！一定要约杯咖啡叙叙旧！",tag:"社交 Social"},
+  {term:"Bummer",meaning:"Disappointing / that sucks",meaningCN:"扫兴 / 太可惜了",example:"Wait, the show got cancelled?? Ugh, what a bummer.",exampleCN:"等等，演出取消了？？唉，太扫兴了。",tag:"情绪 Emotion"},
+  {term:"Shook",meaning:"Shocked / stunned / emotionally wrecked",meaningCN:"被震撼到的 / 震惊到不行的",example:"I am still SHOOK from that plot twist. Can't even process.",exampleCN:"那个剧情反转我现在还没缓过来。无法消化。",tag:"情绪 Emotion"},
+  {term:"Stan",meaning:"An obsessive superfan / to be a diehard fan of",meaningCN:"狂热粉丝 / 铁粉 / 死忠粉",example:"I don't just like her music, I literally stan her.",exampleCN:"我不只是喜欢她的歌，我就是她的死忠粉。",tag:"标签 Label"}
+];
+renderDict();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
+</script>
+</body>
+</html>

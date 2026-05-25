@@ -8,35 +8,37 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==================== CONFIG ====================
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-6';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-014a5bf3070a4e08a689330c487de5cb';
+const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+const MODEL = 'deepseek-chat';
 
 // ==================== AI CHAT ENDPOINT ====================
 app.post('/api/chat', async (req, res) => {
   const { messages, scenario, level } = req.body;
 
-  if (!ANTHROPIC_API_KEY) {
-    // Fallback: use mock responses
+  if (!DEEPSEEK_API_KEY) {
     return res.json({ reply: getMockReply(scenario, messages) });
   }
 
   try {
     const systemPrompt = getChatSystemPrompt(scenario, level);
 
+    const apiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages
+    ];
+
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Authorization': 'Bearer ' + DEEPSEEK_API_KEY
       },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 300,
-        system: systemPrompt,
-        messages: messages
+        temperature: 0.85,
+        messages: apiMessages
       })
     });
 
@@ -47,7 +49,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const data = await response.json();
-    const reply = data.content[0].text;
+    const reply = data.choices[0].message.content;
     res.json({ reply });
   } catch (e) {
     console.error('Chat error:', e);
@@ -352,14 +354,15 @@ app.get('/api/ielts/topics', (req, res) => {
 // ==================== HEALTH CHECK ====================
 app.get('/api/status', (req, res) => {
   res.json({
-    hasApiKey: !!ANTHROPIC_API_KEY,
+    hasApiKey: !!DEEPSEEK_API_KEY,
     model: MODEL,
-    message: ANTHROPIC_API_KEY ? 'AI对话已启用' : '未配置API Key，使用内置模拟回复。设置环境变量 ANTHROPIC_API_KEY 启用 AI。'
+    provider: 'DeepSeek',
+    message: DEEPSEEK_API_KEY ? 'AI对话已启用 (DeepSeek)' : '未配置API Key，使用内置模拟回复。'
   });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`API Key configured: ${!!ANTHROPIC_API_KEY}`);
+  console.log('Server running at http://localhost:' + PORT);
+  console.log('DeepSeek API Key configured: ' + !!DEEPSEEK_API_KEY);
 });

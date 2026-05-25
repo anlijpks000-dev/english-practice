@@ -1,49 +1,123 @@
+// Generate minimal valid PNG icon files (solid color)
 const fs = require('fs');
+const zlib = require('zlib');
 
-// Generate a simple recognizable PNG using pure buffer math
-// 192x192 purple icon with speech bubble
-function createPNG(size) {
-  const { createCanvas } = (() => { try { return require('canvas'); } catch(e) { return {}; } })();
-  if (!createCanvas) return null;
+function buildPNG(width, height, r, g, b) {
+  // Build raw pixel data with filter byte per row
+  const rawRows = [];
+  for (let y = 0; y < height; y++) {
+    const row = Buffer.alloc(1 + width * 4);
+    row[0] = 0; // filter: none
+    for (let x = 0; x < width; x++) {
+      const off = 1 + x * 4;
+      row[off] = r;
+      row[off + 1] = g;
+      row[off + 2] = b;
+      row[off + 3] = 255;
+    }
+    rawRows.push(row);
+  }
 
-  const canvas = createCanvas(size, size);
-  const ctx = canvas.getContext('2d');
+  const raw = Buffer.concat(rawRows);
+  const compressed = zlib.deflateSync(raw);
 
-  // Background gradient
-  const grad = ctx.createLinearGradient(0, 0, size, size);
-  grad.addColorStop(0, '#0f0c29');
-  grad.addColorStop(1, '#302b63');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, size, size, size * 0.18);
-  ctx.fill();
+  const crcTable = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    crcTable[n] = c;
+  }
 
-  // Speech bubble
-  ctx.fillStyle = '#fda085';
-  ctx.font = `bold ${size * 0.38}px "Segoe UI"`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('EN', size / 2, size * 0.58);
+  function crc32(buf) {
+    let c = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
 
-  return canvas.toBuffer('image/png');
+  function chunk(type, data) {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length, 0);
+    const typeB = Buffer.from(type, 'ascii');
+    const crcInput = Buffer.concat([typeB, data]);
+    const crcVal = Buffer.alloc(4);
+    crcVal.writeUInt32BE(crc32(crcInput), 0);
+    return Buffer.concat([len, typeB, data, crcVal]);
+  }
+
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+  const ihdrData = Buffer.alloc(13);
+  ihdrData.writeUInt32BE(width, 0);
+  ihdrData.writeUInt32BE(height, 4);
+  ihdrData[8] = 8;  // bit depth
+  ihdrData[9] = 6;  // color type: RGBA
+  ihdrData[10] = 0; // compression
+  ihdrData[11] = 0; // filter
+  ihdrData[12] = 0; // interlace
+
+  return Buffer.concat([
+    signature,
+    chunk('IHDR', ihdrData),
+    chunk('IDAT', compressed),
+    chunk('IEND', Buffer.alloc(0))
+  ]);
 }
 
-// Try canvas-based PNG, fallback to simple generated PNG
-try {
-  const png192 = createPNG(192);
-  const png512 = createPNG(512);
-  if (png192) {
-    fs.writeFileSync('public/icon-192.png', png192);
-    fs.writeFileSync('public/icon-512.png', png512);
-    console.log('PNG icons created with canvas');
-    process.exit(0);
+// Create purple-themed icons with a lighter center stripe for visual interest
+function buildGradientIcon(size) {
+  const rawRows = [];
+  for (let y = 0; y < size; y++) {
+    const row = Buffer.alloc(1 + size * 4);
+    row[0] = 0;
+    const t = y / size;
+    const r = Math.round(15 + t * 33);   // 15 -> 48
+    const gr = Math.round(12 + t * 31);  // 12 -> 43
+    const b = Math.round(41 + t * 58);   // 41 -> 99
+    for (let x = 0; x < size; x++) {
+      const off = 1 + x * 4;
+      row[off] = r;
+      row[off + 1] = gr;
+      row[off + 2] = b;
+      row[off + 3] = 255;
+    }
+    rawRows.push(row);
   }
-} catch(e) { /* fallback */ }
 
-// Fallback: create minimal valid 1x1 PNG, will be replaced by SVG in manifest
-console.log('canvas not available, creating placeholder PNGs');
-// Minimal valid 1x1 purple PNG (we'll use SVGs for actual display)
-const png1x1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
-fs.writeFileSync('public/icon-192.png', png1x1);
-fs.writeFileSync('public/icon-512.png', png1x1);
-console.log('Placeholder PNGs created');
+  const raw = Buffer.concat(rawRows);
+  const compressed = zlib.deflateSync(raw);
+
+  const crcTable = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    crcTable[n] = c;
+  }
+
+  function crc32(buf) {
+    let c = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+
+  function chunk(type, data) {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length, 0);
+    const typeB = Buffer.from(type, 'ascii');
+    const crcInput = Buffer.concat([typeB, data]);
+    const crcVal = Buffer.alloc(4);
+    crcVal.writeUInt32BE(crc32(crcInput), 0);
+    return Buffer.concat([len, typeB, data, crcVal]);
+  }
+
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const ihdrData = Buffer.alloc(13);
+  ihdrData.writeUInt32BE(size, 0);
+  ihdrData.writeUInt32BE(size, 4);
+  ihdrData[8] = 8; ihdrData[9] = 6; ihdrData[10] = 0; ihdrData[11] = 0; ihdrData[12] = 0;
+
+  return Buffer.concat([signature, chunk('IHDR', ihdrData), chunk('IDAT', compressed), chunk('IEND', Buffer.alloc(0))]);
+}
+
+fs.writeFileSync('public/icon-192.png', buildGradientIcon(192));
+fs.writeFileSync('public/icon-512.png', buildGradientIcon(512));
+console.log('PNG icons created: 192x192 and 512x512');

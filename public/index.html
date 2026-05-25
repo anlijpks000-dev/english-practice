@@ -281,21 +281,68 @@ footer{text-align:center;padding:18px;color:#555;font-size:0.8rem}
 <script>
 // ==================== SPEECH ====================
 var speakingBtn = null;
-function speak(text, btn, tone){
-  if(!('speechSynthesis' in window)) return;
-  if(window.speechSynthesis.speaking && speakingBtn===btn){window.speechSynthesis.cancel();if(btn)btn.classList.remove('speaking');speakingBtn=null;return}
-  window.speechSynthesis.cancel();if(speakingBtn)speakingBtn.classList.remove('speaking');
-  var u=new SpeechSynthesisUtterance(text);u.lang='en-US';
-  switch(tone){case'excited':u.rate=1.05;u.pitch=1.2;break;case'cheerful':u.rate=0.95;u.pitch=1.1;break;case'frustrated':u.rate=0.85;u.pitch=0.9;break;default:u.rate=0.9;u.pitch=1}
-  var voices=window.speechSynthesis.getVoices();
-  var v=voices.find(function(x){return x.lang==='en-US'&&x.name.indexOf('Google')!==-1})||voices.find(function(x){return x.lang==='en-US'})||voices.find(function(x){return x.lang.indexOf('en')===0});
-  if(v)u.voice=v;
-  if(btn){btn.classList.add('speaking');speakingBtn=btn}
-  u.onend=function(){if(btn)btn.classList.remove('speaking');speakingBtn=null};
-  u.onerror=function(){if(btn)btn.classList.remove('speaking');speakingBtn=null};
-  window.speechSynthesis.speak(u);
+var voicesLoaded = false;
+
+// Preload voices - critical for mobile
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  var voices = window.speechSynthesis.getVoices();
+  if (voices && voices.length > 0) {
+    voicesLoaded = true;
+  }
 }
-if('speechSynthesis' in window){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=function(){window.speechSynthesis.getVoices()}}
+loadVoices();
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = function() {
+    voicesLoaded = true;
+    loadVoices();
+  };
+  // Some browsers need a kick to load voices
+  setTimeout(loadVoices, 100);
+  setTimeout(loadVoices, 500);
+}
+
+function speak(text, btn, tone){
+  if (!('speechSynthesis' in window)) return;
+
+  // Toggle: if same button is speaking, stop it
+  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+    window.speechSynthesis.cancel();
+    if (speakingBtn) { speakingBtn.classList.remove('speaking'); }
+    if (speakingBtn === btn) { speakingBtn = null; return; }
+    speakingBtn = null;
+  }
+
+  var cleanText = String(text).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  if (!cleanText.trim()) return;
+
+  var u = new SpeechSynthesisUtterance(cleanText);
+  u.lang = 'en-US';
+  u.volume = 1;
+
+  switch(tone) {
+    case 'excited': u.rate = 1.05; u.pitch = 1.2; break;
+    case 'cheerful': u.rate = 0.95; u.pitch = 1.1; break;
+    case 'frustrated': u.rate = 0.85; u.pitch = 0.9; break;
+    default: u.rate = 0.9; u.pitch = 1;
+  }
+
+  var voices = window.speechSynthesis.getVoices();
+  if (voices && voices.length > 0) {
+    var v = voices.find(function(x){return x.lang === 'en-US' && x.name.indexOf('Google') !== -1})
+         || voices.find(function(x){return x.lang === 'en-US'})
+         || voices.find(function(x){return x.lang && x.lang.indexOf('en') === 0});
+    if (v) u.voice = v;
+  }
+
+  if (btn) { btn.classList.add('speaking'); speakingBtn = btn; }
+  u.onend = function() { if (btn) btn.classList.remove('speaking'); speakingBtn = null; };
+  u.onerror = function(e) { console.log('Speech error:', e); if (btn) btn.classList.remove('speaking'); speakingBtn = null; };
+
+  // Small delay on mobile to ensure audio context is ready
+  var delay = ('ontouchstart' in window) ? 30 : 0;
+  setTimeout(function() { window.speechSynthesis.speak(u); }, delay);
+}
 
 // ==================== NAVIGATION ====================
 document.querySelectorAll('nav button').forEach(function(b){
